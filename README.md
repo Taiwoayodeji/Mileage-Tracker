@@ -1,6 +1,4 @@
-# Create a professional README.md file for the Mileage Tracker project
-
-readme_content = """# 🚗 Professional Mileage Tracker
+# 🚗 Professional Mileage Tracker
 
 A lightweight, mobile-friendly web application designed to help users track and categorize their travel mileage for business and personal purposes. This application runs entirely in the browser and uses LocalStorage to keep your data private and persistent without the need for a backend database.
 
