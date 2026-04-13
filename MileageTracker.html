@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Professional Mileage Tracker</title>
+    <style>
+      :root {
+        --primary: #2563eb;
+        --business: #2563eb;
+        --personal: #059669;
+        --bg: #f8fafc;
+        --text: #1e293b;
+      }
+
+      body {
+        font-family: system-ui, -apple-system, sans-serif;
+        background-color: var(--bg);
+        color: var(--text);
+        display: flex;
+        justify-content: center;
+        padding: 20px;
+      }
+
+      .container {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        width: 100%;
+        max-width: 500px;
+      }
+
+      h2 {
+        text-align: center;
+        margin-top: 0;
+      }
+
+      .tabs {
+        display: flex;
+        gap: 10px;
+        margin-bottom: 1.5rem;
+        border-bottom: 2px solid #e2e8f0;
+        padding-bottom: 10px;
+      }
+
+      .tab {
+        flex: 1;
+        padding: 10px;
+        border: none;
+        background: #f1f5f9;
+        cursor: pointer;
+        border-radius: 6px;
+        font-weight: 600;
+        transition: 0.3s;
+      }
+
+      .tab.active[data-type="business"] {
+        background: var(--business);
+        color: white;
+      }
+      .tab.active[data-type="personal"] {
+        background: var(--personal);
+        color: white;
+      }
+
+      .form-group {
+        margin-bottom: 1rem;
+      }
+      label {
+        display: block;
+        margin-bottom: 0.4rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+      }
+
+      input {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        box-sizing: border-box;
+      }
+
+      .action-btn {
+        width: 100%;
+        padding: 0.75rem;
+        background-color: var(--text);
+        color: white;
+        border: none;
+        border-radius: 6px;
+        font-weight: bold;
+        cursor: pointer;
+        margin-top: 0.5rem;
+      }
+
+      #update-btn {
+        background-color: #f59e0b;
+        display: none;
+      }
+
+      .stats {
+        margin-top: 2rem;
+        padding: 1rem;
+        border-radius: 8px;
+        text-align: center;
+        transition: 0.3s;
+      }
+
+      .stats-business {
+        background: #eff6ff;
+        color: var(--business);
+      }
+      .stats-personal {
+        background: #ecfdf5;
+        color: var(--personal);
+      }
+
+      table {
+        width: 100%;
+        margin-top: 1.5rem;
+        border-collapse: collapse;
+        font-size: 0.9rem;
+      }
+
+      th,
+      td {
+        text-align: left;
+        padding: 0.75rem;
+        border-bottom: 1px solid #e2e8f0;
+      }
+
+      .edit-link {
+        color: var(--primary);
+        cursor: pointer;
+        text-decoration: underline;
+        font-weight: 600;
+      }
+
+      .clear-btn {
+        width: 100%;
+        background: #ef4444;
+        color: white;
+        border: none;
+        padding: 0.5rem;
+        border-radius: 6px;
+        margin-top: 1.5rem;
+        font-size: 0.8rem;
+        cursor: pointer;
+        opacity: 0.7;
+      }
+
+      .clear-btn:hover {
+        opacity: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2>🚗 Mileage Tracker</h2>
+
+      <div class="tabs">
+        <button
+          class="tab active"
+          data-type="business"
+          onclick="setCategory('business')"
+        >
+          Business
+        </button>
+        <button
+          class="tab"
+          data-type="personal"
+          onclick="setCategory('personal')"
+        >
+          Personal
+        </button>
+      </div>
+
+      <div class="form-group">
+        <label>Date</label>
+        <input type="date" id="date" />
+      </div>
+      <div class="form-group">
+        <label>Trip Detail</label>
+        <input type="text" id="trip-detail" placeholder="Dallas - Coppell" />
+      </div>
+      <div class="form-group">
+        <label>Distance (miles)</label>
+        <input type="number" id="miles" step="0.1" placeholder="0.0" />
+      </div>
+
+      <button id="add-btn" class="action-btn" onclick="addEntry()">
+        Add Trip
+      </button>
+      <button id="update-btn" class="action-btn" onclick="saveEdit()">
+        Update Trip
+      </button>
+
+      <div id="stats-box" class="stats stats-business">
+        <strong
+          >Total <span id="cat-label">Business</span>:
+          <span id="total-dist">0</span> miles</strong
+        >
+      </div>
+
+      <table id="log-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Trip Detail</th>
+            <th>Miles</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="log-body"></tbody>
+      </table>
+
+      <button class="clear-btn" onclick="clearLogs()">
+        Clear Current Tab Data
+      </button>
+    </div>
+
+    <script>
+      let logs = JSON.parse(localStorage.getItem("mileageLogs")) || [];
+      let currentCategory = "business";
+      let editIndex = null;
+
+      function setCategory(cat) {
+        currentCategory = cat;
+        cancelEdit();
+
+        document
+          .querySelectorAll(".tab")
+          .forEach((t) => t.classList.remove("active"));
+        document.querySelector(`[data-type="${cat}"]`).classList.add("active");
+
+        const statsBox = document.getElementById("stats-box");
+        const catLabel = document.getElementById("cat-label");
+
+        if (cat === "business") {
+          statsBox.className = "stats stats-business";
+          catLabel.innerText = "Business";
+        } else {
+          statsBox.className = "stats stats-personal";
+          catLabel.innerText = "Personal";
+        }
+
+        updateUI();
+      }
+
+      function updateUI() {
+        const tbody = document.getElementById("log-body");
+        const totalSpan = document.getElementById("total-dist");
+        tbody.innerHTML = "";
+
+        let total = 0;
+
+        logs.forEach((entry, index) => {
+          if (entry.category === currentCategory) {
+            total += parseFloat(entry.miles);
+            const row = `<tr>
+                    <td>${entry.date}</td>
+                    <td>${entry.details}</td>
+                    <td>${entry.miles}</td>
+                    <td><span class="edit-link" onclick="startEdit(${index})">Edit</span></td>
+                </tr>`;
+            tbody.innerHTML += row;
+          }
+        });
+
+        totalSpan.innerText = total.toFixed(1);
+        localStorage.setItem("mileageLogs", JSON.stringify(logs));
+      }
+
+      function addEntry() {
+        const date = document.getElementById("date").value;
+        const details = document.getElementById("trip-detail").value;
+        const miles = document.getElementById("miles").value;
+
+        if (!date || !details || !miles) {
+          alert("Please fill in all fields");
+          return;
+        }
+
+        logs.push({
+          date,
+          details,
+          miles: parseFloat(miles).toFixed(1),
+          category: currentCategory,
+        });
+
+        resetForm();
+        updateUI();
+      }
+
+      function startEdit(index) {
+        editIndex = index;
+        const entry = logs[index];
+
+        document.getElementById("date").value = entry.date;
+        document.getElementById("trip-detail").value = entry.details;
+        document.getElementById("miles").value = entry.miles;
+
+        document.getElementById("add-btn").style.display = "none";
+        document.getElementById("update-btn").style.display = "block";
+      }
+
+      function saveEdit() {
+        if (editIndex === null) return;
+
+        const date = document.getElementById("date").value;
+        const details = document.getElementById("trip-detail").value;
+        const miles = document.getElementById("miles").value;
+
+        if (!date || !details || !miles) {
+          alert("Please fill in all fields");
+          return;
+        }
+
+        logs[editIndex] = {
+          date,
+          details,
+          miles: parseFloat(miles).toFixed(1),
+          category: currentCategory,
+        };
+
+        cancelEdit();
+        updateUI();
+      }
+
+      function cancelEdit() {
+        editIndex = null;
+        resetForm();
+        document.getElementById("add-btn").style.display = "block";
+        document.getElementById("update-btn").style.display = "none";
+      }
+
+      function resetForm() {
+        document.getElementById("trip-detail").value = "";
+        document.getElementById("miles").value = "";
+        document.getElementById("date").valueAsDate = new Date();
+      }
+
+      function clearLogs() {
+        if (confirm(`Delete all ${currentCategory} records?`)) {
+          logs = logs.filter((entry) => entry.category !== currentCategory);
+          cancelEdit();
+          updateUI();
+        }
+      }
+
+      document.getElementById("date").valueAsDate = new Date();
+      updateUI();
+    </script>
+  </body>
+</html>
